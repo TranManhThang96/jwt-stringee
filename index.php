@@ -7,9 +7,11 @@ use Lcobucci\JWT\Signer\Hmac\Sha256;
 use Lcobucci\JWT\Signer\Key\InMemory;
 use Lcobucci\JWT\UnencryptedToken;
 use Firebase\JWT\JWT;
+use \Lcobucci\JWT\Validation\Constraint\SignedWith;
 
 $secret = 'MUxJTVZXVVIyWFRWQlJKTFA4V1NHOFpSNDdOSzVCWk8=';
 $authToken = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhY2NvdW50X2lkIjoiQUNWMklES0tUQiIsImRpc3BsYXlOYW1lIjoiSFx1MWViMW5nIFRoXHUxZWNiIExcdTAwZWEiLCJhdmF0YXJVcmwiOm51bGwsInBvcnRhbF9pZCI6IlBUNzVYRUhaOFAiLCJhY2NvdW50X3BvcnRhbF9pZCI6IlBBSFdHM1lGQk8iLCJleHAiOjE2NTUwMDUwNTEsImtleV9pZCI6IktFTDRURFQ5MjQifQ.d3Y4RVhsib0pkbo_NKvq98TqcliWZbMm1glFXtR_0QQ';
+
 $config = Configuration::forSymmetricSigner(
 	new Sha256(),
 	InMemory::plainText($secret)
@@ -43,7 +45,14 @@ function checkToken($authToken)
 	global $config;
 	try {
 		$token = $config->parser()->parse($authToken);
-		echo($token->toString());
+		
+		//validate
+		$config->setValidationConstraints(new SignedWith($config->signer(), $config->verificationKey()));
+		$constraints = $config->validationConstraints();
+		$isValid = $config->validator()->validate($token, ...$constraints);
+		if (!$isValid) {
+			throw new Exception('Invalid token!');
+		}
 	} catch (Exception $e) {
 		echo $e->getMessage();
 	}
@@ -61,5 +70,7 @@ function checkTokenFirebase($authToken)
 	}
 }
 
-checkToken($authToken);  // echo authToken
+
+checkToken($authToken);  // Invalid token
+echo '<br/>';
 checkTokenFirebase($authToken); // Signature verification failed
